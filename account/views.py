@@ -74,6 +74,9 @@ class LoginView(APIView):
        
         email = request.data.get('email')
         password = request.data.get('password')
+        user = User.objects.filter(email=email).first()
+        if user is not None and user.is_active == False:
+            return Response({"error": "Account is not activated. Please check your email for the activation link."}, status=status.HTTP_400_BAD_REQUEST)
         user = authenticate(request, email=email, password=password)
         if user is not None:
             login(request, user)
@@ -129,6 +132,7 @@ class DeleteUserView(APIView):
         user = request.user
         if user.is_authenticated:
             user.delete()
+            logout(request)
             return Response({"message": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
         return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
 
