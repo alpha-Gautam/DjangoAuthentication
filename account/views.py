@@ -80,9 +80,63 @@ class LoginView(APIView):
             return Response({"message": "Login successful."}, status=status.HTTP_200_OK)
         return Response({"error": "Invalid credentials."}, status=status.HTTP_400_BAD_REQUEST)   
     
+class UserDetailsView(APIView):
+    # permission_classes = [AllowAny]
+
+    def get(self, request):
+        user = request.user
+        if user.is_authenticated:
+            serializer = UserSerializer(user)
+            data= serializer.data
+            data["is_staff"] = user.is_staff
+            return Response(data, status=status.HTTP_200_OK)
+        return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)   
+    
+    
+    def patch(self, request):
+        user = request.user
+        if user.is_authenticated:
+            serializer = UserSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    
+class UpdatePasswordView(APIView):
+    # permission_classes = [AllowAny]
+
+    def post(self, request):
+        user = request.user
+        if user.is_authenticated:
+            old_password = request.data.get('old_password')
+            new_password = request.data.get('new_password')
+            confirm_password = request.data.get('confirm_password')
+            if not user.check_password(old_password):
+                return Response({"error": "Old password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+            if new_password != confirm_password:
+                return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+            user.save()
+            return Response({"message": "Password updated successfully."}, status=status.HTTP_200_OK)
+        return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
+    
+class DeleteUserView(APIView):
+    # permission_classes = [AllowAny]
+
+    def delete(self, request):
+        user = request.user
+        if user.is_authenticated:
+            user.delete()
+            return Response({"message": "User deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)
+
 class LogoutView(APIView):
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
     def post(self, request):
         logout(request)
         return Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
+ 
+ 
