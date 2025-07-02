@@ -9,13 +9,25 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 from django.utils.decorators import method_decorator
 from django.conf import settings
 from account.utils import send_activation_email
 
 
+class TestAPI(APIView):
+    permission_classes = [AllowAny]
 
+    def post(self, request):
+        return Response({"message": "API is working!"}, status=status.HTTP_200_OK)
+    
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class GetCSRFToken(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({"csrfToken": request.META.get('CSRF_COOKIE', '')}, status=status.HTTP_200_OK)
+    
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
 
@@ -28,6 +40,8 @@ class RegistrationView(APIView):
             token = default_token_generator.make_token(user)
             activation_link = reverse('activate', kwargs={'uid':uid, 'token':token})
             activation_url = f'{settings.SITE_DOMAIN}{activation_link}'
+            print("activation linl--",activation_link)
+            print("activation url--",activation_url)
             send_activation_email(user.email, activation_url)
             
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -44,22 +58,31 @@ class ActivateView(APIView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
         if user is not None and default_token_generator.check_token(user, token):
+            if user.is_active:
+                return Response({"message": "Account is already activated."}, status=status.HTTP_200_OK)
             user.is_active = True
             user.save()
             return Response({"message": "Account activated successfully."}, status=status.HTTP_200_OK)
         else:
             return Response({"error": "Activation link is invalid or has expired."}, status=status.HTTP_400_BAD_REQUEST)
         
-     
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    @method_decorator(ensure_csrf_cookie)
     def post(self, request):
-        username = request.data.get('username')
+       
+        email = request.data.get('email')
         password = request.data.get('password')
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, email=email, password=password)
         if user is not None:
             login(request, user)
             return Response({"message": "Login successful."}, status=status.HTTP_200_OK)
         return Response({"error": "Invalid credentials."}, status=status.HTTP_400_BAD_REQUEST)   
+    
+class LogoutView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        logout(request)
+        return Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
