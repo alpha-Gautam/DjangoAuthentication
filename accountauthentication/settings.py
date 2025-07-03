@@ -135,7 +135,7 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -188,3 +188,7 @@ REST_FRAMEWORK = {
     ),
      
 }
+
+# change the session cookie age to 30 min (1800 seconds), default is 1209600 seconds (2 weeks)
+# after 30 min authentication will expire and user will have to login again
+SESSION_COOKIE_AGE = 1800
