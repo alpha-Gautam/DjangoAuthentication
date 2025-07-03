@@ -9,10 +9,11 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie, csrf_protect
 from django.utils.decorators import method_decorator
 from django.conf import settings
-from account.utils import send_activation_email
+from account.utils import send_activation_email, send_reset_password_email
 
 
 class TestAPI(APIView):
@@ -144,3 +145,42 @@ class LogoutView(APIView):
         return Response({"message": "Logout successful."}, status=status.HTTP_200_OK)
  
  
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        user = User.objects.filter(email=email).first()
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = reverse('reset_password', kwargs={'uid': uid, 'token': token})
+            reset_url = f'{settings.SITE_DOMAIN}{reset_link}'
+            send_reset_password_email(user.email, reset_url)  # Implement this function to send the email
+            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+        return Response({"error": "Email not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+class ResetPasswordPageView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, uid, token):
+        # Render the password reset page
+        print("password reset page opened")
+        return render(request, 'account/reset_password_page.html', {'uid': uid, 'token': token})
+
+    def post(self, request, uid, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+        if user is not None and default_token_generator.check_token(user, token):
+            new_password = request.data.get('new_password')
+            confirm_password = request.data.get('confirm_password')
+            if new_password != confirm_password:
+                return Response({"error": "Passwords do not match."}, status=status.HTTP_400_BAD_REQUEST)
+            user.set_password(new_password)
+            user.save()
+            return Response({"message": "Password reset successfully."}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Reset link is invalid or has expired."}, status=status.HTTP_400_BAD_REQUEST)

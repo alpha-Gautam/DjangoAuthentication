@@ -30,3 +30,4 @@ def send_reset_password_email(recipient_email, reset_url):
     email = EmailMultiAlternatives(subject, text_content, from_email, to)
     email.attach_alternative(html_content, "text/html")
     email.send()
+    
