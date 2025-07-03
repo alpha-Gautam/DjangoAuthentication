@@ -67,7 +67,7 @@ class ActivateView(APIView):
         else:
             return Response({"error": "Activation link is invalid or has expired."}, status=status.HTTP_400_BAD_REQUEST)
         
-
+@method_decorator(csrf_protect, name='dispatch')
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
