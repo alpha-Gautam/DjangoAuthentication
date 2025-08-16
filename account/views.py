@@ -91,7 +91,7 @@ class UserDetailsView(APIView):
         user = request.user
         if user.is_authenticated:
             serializer = UserSerializer(user)
-            data= serializer.data
+            data= dict(serializer.data)
             data["is_staff"] = user.is_staff
             return Response(data, status=status.HTTP_200_OK)
         return Response({"error": "User not authenticated."}, status=status.HTTP_401_UNAUTHORIZED)   
