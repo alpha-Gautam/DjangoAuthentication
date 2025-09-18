@@ -28,7 +28,7 @@ class GetCSRFToken(APIView):
 
     def get(self, request):
         return Response({"csrfToken": request.META.get('CSRF_COOKIE', '')}, status=status.HTTP_200_OK)
-    
+@method_decorator(csrf_protect, name='dispatch')
 class RegistrationView(APIView):
     permission_classes = [AllowAny]
 
@@ -146,22 +146,22 @@ class LogoutView(APIView):
  
  
 class ForgotPasswordView(APIView):
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
-    def post(self, request):
-        email = request.data.get('email')
-        user = User.objects.filter(email=email).first()
-        if user:
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            reset_link = reverse('reset_password', kwargs={'uid': uid, 'token': token})
-            reset_url = f'{settings.SITE_DOMAIN}{reset_link}'
-            send_reset_password_email(user.email, reset_url)  # Implement this function to send the email
-            return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
-        return Response({"error": "Email not found."}, status=status.HTTP_404_NOT_FOUND)
-    
+        def post(self, request):
+            email = request.data.get('email')
+            user = User.objects.filter(email=email).first()
+            if user:
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                reset_link = reverse('reset_password', kwargs={'uid': uid, 'token': token})
+                reset_url = f'{settings.SITE_DOMAIN}{reset_link}'
+                send_reset_password_email(user.email, reset_url)  # Implement this function to send the email
+                return Response({"message": "Password reset link sent to your email."}, status=status.HTTP_200_OK)
+            return Response({"error": "Email not found."}, status=status.HTTP_404_NOT_FOUND)
+        
 class ResetPasswordPageView(APIView):
-    permission_classes = [AllowAny]
+    # permission_classes = [AllowAny]
 
     def get(self, request, uid, token):
         # Render the password reset page
